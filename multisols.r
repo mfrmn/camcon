@@ -1,17 +1,18 @@
 #
 # file  = name of file to be duplicated
 # ngrps = number of groups
-makesolutions <- function(rfile, ngrps, strpattern = c('#DST','#PST','#RST','#END'), qpattern = '#q') {
+makesolutions <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#q') {
   con <- file(rfile)
   script <- readLines(con, warn=F)
   close(con)
   strlocs <- getstrlocs(script, strpattern)
   makeheader(script, rfile, strlocs$he)
-  qlocs <- getqlocs(script, qpattern)
   data.files <- getdata(script, strlocs$ds, strlocs$de)
   createalldata(data.files, ngrps, rfile)
-  params <- getparams(script, strlocs$ps, strlocs$pe)
-  createallparams(params, ngrps, rfile)
+  params <- createallparams(getparams(script, strlocs$ps, strlocs$pe), ngrps, rfile)
+  qscript <- dpreplace(script[strlocs$qs:strlocs$qe], data.files, params)
+  qlocs <- c(getqlocs(qscript, qpattern),length(qscript)+1)
+  createallqs(qscript, qlocs, ngrps, rfile)
 }
 
 getstrlocs <- function(script, strpattern) {
@@ -26,16 +27,12 @@ getstrlocs <- function(script, strpattern) {
 }
 
 makeheader <- function(script, rfile, end) {
+  cat('# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# HEADER: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# =================================================#\n', file = paste("camcon_", rfile, sep=""), append=T)
   for (i in 1:end) {
     write(script[i], file = paste("camcon_", rfile, sep=""), append=T)
   }
-}
-
-getqlocs <- function(script, qpattern) {
-  qlocs <- grep(qpattern, script)
-  qnames <- sub("#", "", script[qlocs])
-  names(qlocs) <- qnames
-  qlocs
 }
 
 getdata <- function(script, start, end) {
@@ -46,7 +43,12 @@ getdata <- function(script, start, end) {
 }
 
 createalldata <- function(alldata, ngrps, rfile) {
-  root <- paste(getwd(), "camcon_data/", sep="/")
+  cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# DATA: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  fexten <- sub(' ', '', rfile)
+  if(length(grep('\\.', fexten)) > 0) fexten <- unlist(strsplit(fexten,'\\.'))[1]
+  root <- paste(getwd(), "/camcon_", fexten, '/', sep="")
   if(!file.exists(root)) dir.create(root)
   for(i in 1: ngrps) {
     rootG <- paste(root, "group_", i, "/", sep="")
@@ -81,9 +83,14 @@ getparams <- function(script, start, end) {
 }
 
 createallparams <- function(allparams, ngrps, rfile) {
+  cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# PARAMS: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  param.names <- rep(NA, length(allparams))
   for(i in 1:length(allparams)) {
-    createparam(allparams[i], ngrps, rfile)
+    param.names[i] <- createparam(allparams[i], ngrps, rfile)
   }
+  param.names[!is.na(param.names)]
 }
 
 createparam <- function(param, ngrps, rfile) {
@@ -92,30 +99,54 @@ createparam <- function(param, ngrps, rfile) {
     rhs <- unlist(strsplit(param,'<-'))[2]  
   }
   if(length(grep('=', param)) > 0) {
-    lhs <- unlist(strsplit(param,'<-'))[1]
-    rhs <- unlist(strsplit(param,'<-'))[2]  
+    lhs <- unlist(strsplit(param,'='))[1]
+    rhs <- unlist(strsplit(param,'='))[2]  
   }
-  if(exists('lhs')&exists('rhs')) {
+  if(exists('lhs') & exists('rhs')) {
     par <- eval(parse(text=rhs))
-    if(length(par) == ngrps) cat('\n',param,sep='', file = paste("camcon_", rfile, sep=""), append=T)
-    if(length(par) > ngrps) cat('\n',param,'[1:',ngrps,']',sep='', file = paste("camcon_", rfile, sep=""), append=T)
-    if(length(par) < ngrps) cat('\n',lhs,'<- unlist(sapply(1:',ngrps,', function(i) ',rhs,'))[1:',ngrps,']',sep='', file = paste("camcon_", rfile, sep=""), append=T)
+    if(length(par) == ngrps) cat('\n',param, sep='', file = paste("camcon_", rfile, sep=""), append=T)
+    if(length(par) > ngrps) cat('\n',param,'[1:',ngrps,']', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+    if(length(par) < ngrps) cat('\n',lhs,' <- unlist(sapply(1:',ngrps,', function(i) ',rhs,'))[1:',ngrps,']',sep='', file = paste("camcon_", rfile, sep=""), append=T)
+  }
+  if(exists('lhs')) lhs
+  else NA
+}
+
+dpreplace <- function(qscript, data, params) {
+  for(i in 1:length(data)) {
+    qscript <- gsub(data[i], paste(data[i],"[[i]]", sep=""), qscript)
+  }
+  for(i in 1:length(params)) {
+    qscript <- gsub(params[i], paste(params[i],"[[i]]", sep=""), qscript)
+  }
+  qscript
+}
+
+getqlocs <- function(script, qpattern) {
+  qlocs <- grep(qpattern, script)
+  qnames <- sub("#", "", script[qlocs])
+  names(qlocs) <- qnames
+  qlocs
+}
+
+createallqs <- function(qscript, qlocs, ngrps, rfile) {
+  cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
+  cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+  for(i in 1:(length(qlocs)-1)) {
+    createq(qscript[(qlocs[i]+1):(qlocs[i+1]-1)], names(qlocs[i]), ngrps, rfile)
   }
 }
-createallparams(c('param.x <- rnorm(12)','param.x <- c(0,1,2,3)'),10,filename)
-createparam('param.x <- c(0,1,2,3)',3,filename)
 
+createq <- function(question, qname, ngrps, rfile) {
+  cat('\n',qname,' <- unlist(lapply(1:',nGrps,', function(i) {\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+  for(i in 1:length(question)) {
+    cat('  ',question[i],'\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+  }
+  cat('}))', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+}
 
-
-lhs <- unlist(strsplit('param.x <- rnorm(1)','<-'))[1]
-rhs <- unlist(strsplit('param.x <- rnorm(1)','<-'))[2]
-cat(lhs,'<- unlist(sapply(1:',10,', function(i) ',rhs,'))[1:',10,']',sep='')
-param.x <- unlist(sapply(1:10, function(i)  c(1,2,3)))[1:10]
-
-makesolutions(filename, nGrps, strpattern = c('#DATA','#PARAM','#SCRIPT','#END'), qpattern = '#q')
-
-
-
+names(qlocs)
 
 
 # Point to R file
@@ -124,63 +155,11 @@ filename <- "Quiz4.r"
 # Specify Number of Groups
 nGrps <- 10
 
+# Run script
+makesolutions(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#q')
 
 
-# Read in the lines of the r file
-script <- readLines(rfile, warn=F)
-len <- length(script)
 
-# Generate list of names of data sets
-DStart <- match("#DATA", script) + 1
-DEnd <- match("#START", script) - 1
-data <- sapply(DStart:DEnd, function(i) sub("#", "", script[i]))
-
-# Fill out header of new R file
-for (i in 1:(DStart-2)) {
-  write(script[i], file=paste("new",rfile,sep=""),append=T)
-}
-
-# Reduces file to those lines we are interested in
-script <- script[(DEnd+2):len]
-len <- length(script)
-finloc <- match("#END", script)
-
-# Generates list of question start (and hence end) locations
-qlocs <- c(grep("#q",script),finloc)
-nqs <- length(qlocs)-1
-
-# Define Wrapping for each Q
-wrapS <- "unlist( lapply(1:"
-wrapS <- paste(wrapS,nGrps,sep="")
-wrapS <- paste(wrapS,", function(x) {\n")
-wrapE <- "\n}))"
-
-# Main Function
-for (i in 1:nqs) {
-  # Generate unique question variable
-  qname <- sub("#", "", script[qlocs[i]])
-  qname <- paste(qname, " <- ", sep="")
-  # Determine whether the question spans more than 1 line
-  diff <- qlocs[i+1]-qlocs[i]-2
-  # Write the first line of the output
-  output <- script[qlocs[i]+1]
-  # If Q spans more than one line, add all of the other lines to output to
-  if (diff > 0) {
-    for (j in 1:diff) {
-      output <- paste(output,script[qlocs[i]+1+j], sep="; \n")
-    }
-  }
-  # Check for each data set in the output, and if match then append with [[x]] 
-  for (k in 1:length(data)) {
-    output <- gsub(data[k],paste(data[k],"[[x]]", sep=""),output)   
-  }
-  # Add the wrapping to the output
-  output <- paste(wrapS,output,sep="")
-  output <- paste(qname,output,sep="")
-  output <- paste(output,wrapE,sep="")
-  # Write the output to the new file
-  write(output, file=paste("new",rfile,sep=""),append=T)
-}
 
 # Prepare solution csv file
 
