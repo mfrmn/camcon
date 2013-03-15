@@ -1,7 +1,7 @@
 #
 # file  = name of file to be duplicated
 # ngrps = number of groups
-makesolutions <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#q') {
+camcon <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#q') {
   con <- file(rfile)
   script <- readLines(con, warn=F)
   close(con)
@@ -11,8 +11,9 @@ makesolutions <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIP
   createalldata(data.files, ngrps, rfile)
   params <- createallparams(getparams(script, strlocs$ps, strlocs$pe), ngrps, rfile)
   qscript <- dpreplace(script[strlocs$qs:strlocs$qe], data.files, params)
-  qlocs <- c(getqlocs(qscript, qpattern),length(qscript)+1)
-  createallqs(qscript, qlocs, ngrps, rfile)
+  qlocs <- getqlocs(qscript, qpattern)
+#   createallqs(qscript, qlocs, ngrps, rfile)
+  createqs(qscript, qlocs, ngrps, rfile)
 }
 
 getstrlocs <- function(script, strpattern) {
@@ -94,13 +95,16 @@ createallparams <- function(allparams, ngrps, rfile) {
 }
 
 createparam <- function(param, ngrps, rfile) {
+  param.len <- nchar(param)
   if(length(grep('<-', param)) > 0) {
-    lhs <- unlist(strsplit(param,'<-'))[1]
-    rhs <- unlist(strsplit(param,'<-'))[2]  
+    pos <- regexpr('<-',param)[1]
+    lhs <- substr(param, 1, pos-1)
+    rhs <- substr(param, pos+2, param.len)
   }
-  if(length(grep('=', param)) > 0) {
-    lhs <- unlist(strsplit(param,'='))[1]
-    rhs <- unlist(strsplit(param,'='))[2]  
+  if(!exists('lhs') & !exists('rhs') & (length(grep('=', param)) > 0)) {
+    pos <- regexpr('=',param)[1]
+    lhs <- substr(param, 1, pos-1)
+    rhs <- substr(param, pos+1, param.len)
   }
   if(exists('lhs') & exists('rhs')) {
     par <- eval(parse(text=rhs))
@@ -114,7 +118,7 @@ createparam <- function(param, ngrps, rfile) {
 
 dpreplace <- function(qscript, data, params) {
   for(i in 1:length(data)) {
-    qscript <- gsub(data[i], paste(data[i],"[[i]]", sep=""), qscript)
+    qscript <- gsub(data[i], paste(data[i],".ls[[i]]", sep=""), qscript)
   }
   for(i in 1:length(params)) {
     qscript <- gsub(params[i], paste(params[i],"[[i]]", sep=""), qscript)
@@ -122,41 +126,79 @@ dpreplace <- function(qscript, data, params) {
   qscript
 }
 
+valid_var_names <- function(x, allow_reserved = TRUE, unique = FALSE) {
+  ok <- rep.int(TRUE, length(x))
+  max_name_length <- if(getRversion() < "2.13.0") 256L else 10000L
+  ok[nchar(x) > max_name_length] <- FALSE
+  if(!allow_reserved) {
+    ok[x == "..."] <- FALSE
+    ok[grepl("^\\.{2}[[:digit:]]+$", x)] <- FALSE
+  }
+  ok[x != make.names(x, unique = unique)] <- FALSE
+  ok
+}
+
 getqlocs <- function(script, qpattern) {
   qlocs <- grep(qpattern, script)
   qnames <- sub("#", "", script[qlocs])
+  qnames <- sub("-", "_", qnames)
+  qnames <- sub(" ", "", qnames)
+  qnames <- tolower(qnames)
+  validqs <- valid_var_names(qnames)
+  if (FALSE %in% validqs) stop('invalid question name(s)')
   names(qlocs) <- qnames
   qlocs
 }
 
-createallqs <- function(qscript, qlocs, ngrps, rfile) {
-  cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
-  cat('\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
-  cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
-  for(i in 1:(length(qlocs)-1)) {
-    createq(qscript[(qlocs[i]+1):(qlocs[i+1]-1)], names(qlocs[i]), ngrps, rfile)
-  }
+createqs <- function(qscript, qlocs, ngrps, rfile) {
+  text <- ''; for(i in 1:length(qscript)) text <- paste(text, '  ', qscript[i], '\n', sep='')
+  qnames <- sub("#", "", names(qlocs))
+  qvec <- 'c('; for(i in 1:length(qnames)) qvec <- paste(qvec, qnames[i], ',', sep='')
+  qvec <- paste(substr(qvec, 1, nchar(qvec)-1),')',sep='')
+  text2 <- ''; for(i in 1:length(qscript[-qlocs])) text2 <- paste(text2, '  ', qscript[-qlocs][i], '\n', sep='')
+  validqn <- sapply(1:length(qnames), function(i) grepl(qnames[i], text2))
+  if (FALSE %in% validqn) stop('inconsistent variable name(s)')
+  cat('\n\n# =================================================#',
+      '\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE',
+      '\n# =================================================#',
+      '\ncamcon_sols <- list()\n',
+      'for(i in 1:',nGrps,') {\n',
+      text,
+      '  camcon_sols[[i]] <- ', qvec, '\n',
+      '}', sep='', file = paste("camcon_", rfile, sep=""), append=T)
 }
 
-createq <- function(question, qname, ngrps, rfile) {
-  cat('\n',qname,' <- unlist(lapply(1:',nGrps,', function(i) {\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-  for(i in 1:length(question)) {
-    cat('  ',question[i],'\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-  }
-  cat('}))', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-}
+# createallqs <- function(qscript, qlocs, ngrps, rfile) {
+#   cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+#   cat('\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
+#   cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
+#   for(i in 1:(length(qlocs)-1)) {
+#     createq(qscript[(qlocs[i]+1):(qlocs[i+1]-1)], names(qlocs[i]), ngrps, rfile)
+#   }
+# }
+# 
+# createq <- function(question, qname, ngrps, rfile) {
+#   cat('\n',qname,' <- unlist(lapply(1:',nGrps,', function(i) {\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+#   for(i in 1:length(question)) {
+#     cat('  ',question[i],'\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+#   }
+#   cat('}))', sep='', file = paste("camcon_", rfile, sep=""), append=T)
+# }
 
-names(qlocs)
+# createsols <- function(qnames, ) {
+#   
+# }
+
 
 
 # Point to R file
-filename <- "Quiz4.r"
+filename <- "mba.R"
 
 # Specify Number of Groups
 nGrps <- 10
 
 # Run script
-makesolutions(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#q')
+camcon(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q')
 
 
 
