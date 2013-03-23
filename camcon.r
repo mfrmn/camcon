@@ -12,8 +12,14 @@ camcon <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#EN
   params <- createallparams(getparams(script, strlocs$ps, strlocs$pe), ngrps, rfile)
   qscript <- dpreplace(script[strlocs$qs:strlocs$qe], data.files, params)
   qlocs <- getqlocs(qscript, qpattern)
-#   createallqs(qscript, qlocs, ngrps, rfile)
   createqs(qscript, qlocs, ngrps, rfile)
+  source(paste("camcon_", rfile, sep=""))
+  qtype <- getqtype(ngrps)
+  qpoints <- getqpoints(qlocs, 100)
+  qoptions <- getqoptions(qlocs, qtype)
+  pnganswers(qscript, qlocs, ngrps, rfile)
+  answercsv(qlocs, qtype, qoptions, qpoints, ngrps, rfile)
+  tidyup(rfile)
 }
 
 getstrlocs <- function(script, strpattern) {
@@ -123,7 +129,7 @@ dpreplace <- function(qscript, data, params) {
   for(i in 1:length(params)) {
     qscript <- gsub(params[i], paste(params[i],"[[i]]", sep=""), qscript)
   }
-  qscript
+  qscript[qscript != '']
 }
 
 valid_var_names <- function(x, allow_reserved = TRUE, unique = FALSE) {
@@ -138,12 +144,16 @@ valid_var_names <- function(x, allow_reserved = TRUE, unique = FALSE) {
   ok
 }
 
-getqlocs <- function(script, qpattern) {
-  qlocs <- grep(qpattern, script)
-  qnames <- sub("#", "", script[qlocs])
+qnamestovars <- function(qnames) {
+  qnames <- sub("#", "", qnames)
   qnames <- sub("-", "_", qnames)
   qnames <- sub(" ", "", qnames)
-  qnames <- tolower(qnames)
+  tolower(qnames)
+}
+
+getqlocs <- function(script, qpattern) {
+  qlocs <- grep(qpattern, script)
+  qnames <- qnamestovars(script[qlocs])
   validqs <- valid_var_names(qnames)
   if (FALSE %in% validqs) stop('invalid question name(s)')
   names(qlocs) <- qnames
@@ -152,44 +162,141 @@ getqlocs <- function(script, qpattern) {
 
 createqs <- function(qscript, qlocs, ngrps, rfile) {
   text <- ''; for(i in 1:length(qscript)) text <- paste(text, '  ', qscript[i], '\n', sep='')
-  qnames <- sub("#", "", names(qlocs))
+  qnames <- names(qlocs)
   qvec <- 'c('; for(i in 1:length(qnames)) qvec <- paste(qvec, qnames[i], ',', sep='')
   qvec <- paste(substr(qvec, 1, nchar(qvec)-1),')',sep='')
-  text2 <- ''; for(i in 1:length(qscript[-qlocs])) text2 <- paste(text2, '  ', qscript[-qlocs][i], '\n', sep='')
-  validqn <- sapply(1:length(qnames), function(i) grepl(qnames[i], text2))
-  if (FALSE %in% validqn) stop('inconsistent variable name(s)')
+  qexist <- 'c('; for(i in 1:length(qnames)) qexist <- paste(qexist, '"', qnames[i], '",', sep='')
+  qexist <- paste(substr(qexist, 1, nchar(qexist)-1),')',sep='')
   cat('\n\n# =================================================#',
       '\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE',
       '\n# =================================================#',
       '\ncamcon_sols <- list()\n',
       'for(i in 1:',nGrps,') {\n',
       text,
+      '\n  if(i == 1) {\n',
+      '    camcon_validq <- ', qexist, '\n',
+      '    for(j in 1:length(camcon_validq)) if(!exists(camcon_validq[j])) stop(paste("INCONSISTENT VARIABLE NAME:",camcon_validq[j]))\n',
+      '  }\n\n',
       '  camcon_sols[[i]] <- ', qvec, '\n',
+      '  rm(list=camcon_validq)\n',
       '}', sep='', file = paste("camcon_", rfile, sep=""), append=T)
 }
 
-# createallqs <- function(qscript, qlocs, ngrps, rfile) {
-#   cat('\n\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
-#   cat('\n# QUESTIONS: BLANK FOR NOW, CAN PUT ANYTHING HERE', file = paste("camcon_", rfile, sep=""), append=T)
-#   cat('\n# =================================================#', file = paste("camcon_", rfile, sep=""), append=T)
-#   for(i in 1:(length(qlocs)-1)) {
-#     createq(qscript[(qlocs[i]+1):(qlocs[i+1]-1)], names(qlocs[i]), ngrps, rfile)
-#   }
-# }
-# 
-# createq <- function(question, qname, ngrps, rfile) {
-#   cat('\n',qname,' <- unlist(lapply(1:',nGrps,', function(i) {\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-#   for(i in 1:length(question)) {
-#     cat('  ',question[i],'\n', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-#   }
-#   cat('}))', sep='', file = paste("camcon_", rfile, sep=""), append=T)
-# }
+all.is.numeric <- function (x) {
+  old <- options(warn = -1)
+  on.exit(options(old))
+  x <- sub("[[:space:]]+$", "", x)
+  x <- sub("^[[:space:]]+", "", x)
+  !any(is.na(as.numeric(x)))
+}
 
-# createsols <- function(qnames, ) {
-#   
-# }
+getqtype <- function(ngrps) {
+  if(!exists('camcon_sols')) stop('Cannot find solutions')
+  if(length(unique(unlist(lapply(camcon_sols, length)))) != 1) stop('Missing one or more answers in solution matrix camcon_sols')
+  if(length(camcon_sols) != ngrps) stop('Missing solutions for one or more groups')
+  sol.matrix <- do.call(rbind, camcon_sols)
+  qtype <- rep(NA, ncol(sol.matrix))
+  for(i in 1:ncol(sol.matrix)) {
+    if(all.is.numeric(sol.matrix[,i])) qtype[i] <- 'number'
+    else {
+      if(unique(nchar(do.call(rbind, camcon_sols)[,1])) == 1) qtype[i] <- 'multiple'
+      else qtype[i] <- 'text'
+    }
+  }
+  qtype
+}
 
+getqoptions <- function(qlocs, qtype) {
+  qnamesopts <- paste(names(qlocs),'_options',sep='')
+  qoptions <- rep('', length(qlocs))
+  for(i in which(qtype == 'multiple')) {
+    qoptions[i] <- eval(parse(text=qnamesopts[i]))
+  }
+  qoptions
+}
 
+getqpoints <- function(qlocs, totpoints) {
+  nqs <- length(qlocs)
+  base <- floor(totpoints/nqs)
+  points <- rep(base,nqs)
+  nshort <- totpoints-sum(points)
+  while(nshort > 0) {
+    qfill <- max(1,floor(nshort/nqs))
+    nfill <- floor(nshort/qfill)
+    wfill <- sample(1:nqs, nfill, replace=F)
+    points <- points+sapply(1:nqs, function(i) ifelse(i %in% wfill, qfill, 0))
+    nshort <- totpoints-sum(points)
+  }
+  points
+}
+
+pnganswers <- function(qscript, qlocs, ngrps, rfile) {
+  require(PerformanceAnalytics)
+  fexten <- sub(' ', '', rfile)
+  if(length(grep('\\.', fexten)) > 0) fexten <- unlist(strsplit(fexten,'\\.'))[1]
+  root <- paste(getwd(), "/camcon_", fexten, '/', 'pngs/', sep="")
+  if(!file.exists(root)) dir.create(root)
+  locs <- c(qlocs, length(qscript)+1)
+  for(i in 1:ngrps) {
+    for(j in 1:(length(locs)-1)) {
+      basecharperline <- 75; basenlines <- 25; cexval <- 1.5
+      charperline <- floor(basecharperline / cexval)
+      nline <- floor(basenlines / cexval)
+      text <- c(qscript[locs[j]:(locs[j+1]-1)],'',paste('#ANS:',camcon_sols[[i]][j]))
+      text.vec <- c()
+      pos <- 1
+      for(k in 1:length(text)) {
+        text.vec[pos] <- text[k]
+        while(nchar(text.vec[pos]) > charperline) {
+          text.vec[pos+1] <- paste('·  ', substr(text.vec[pos],charperline+1,nchar(text.vec[pos])),sep='')
+          text.vec[pos] <- substr(text.vec[pos],1,charperline)
+          pos <- pos + 1
+        }
+        pos <- pos + 1
+      }
+      while(length(text.vec) > nline) {
+        cexval <- cexval - 0.2
+        charperline <- floor(basecharperline / cexval)
+        nline <- floor(basenlines / cexval)
+        text.vec <- c()
+        pos <- 1
+        for(k in 1:length(text)) {
+          text.vec[pos] <- text[k]
+          while(nchar(text.vec[pos]) > charperline) {
+            text.vec[pos+1] <- paste('·  ', substr(text.vec[pos],charperline+1,nchar(text.vec[pos])),sep='')
+            text.vec[pos] <- substr(text.vec[pos],1,charperline)
+            pos <- pos + 1
+          }
+          pos <- pos + 1
+        }
+        if(cexval < 0.3) stop('Cannot fit solution on plot.')
+      }
+      png(filename = paste(root, 'sols_G', i,'_Q', j, '.png', sep=''), width=612, height=431)
+      textplot(text.vec, valign='top', halign='left', cex=cexval, mar=c(0, 0.5, 0.5, 0))
+      dev.off()
+    }
+  }
+}
+
+answercsv <- function(qloc, qtype, qoptions, qpoints, ngrps, rfile) {
+  qnames <- sub('q','',names(qloc))
+  qnames <- sub('_','-',qnames)
+  fexten <- sub(' ', '', rfile)
+  if(length(grep('\\.', fexten)) > 0) fexten <- unlist(strsplit(fexten,'\\.'))[1]
+  root <- paste(getwd(), "/camcon_", fexten, '/', sep="")
+  sol.mat <- c()
+  for(i in 1:ngrps) {
+    for(j in 1:length(qnames)) {
+      sol.mat <- rbind(sol.mat, cbind(qnames[j], qtype[j], i, 0, qpoints[j], camcon_sols[[i]][j], qoptions[j], paste('sols_G', i, '_Q', j, '.png', sep='')))
+    }
+  }
+  write.table(sol.mat, file = paste(root, 'sols_upload.csv', sep=''), append=T, col.names=F, row.names=F, sep=',')
+}
+
+tidyup <- function(rfile) {
+  file.remove(paste(getwd(), "/camcon_", rfile, sep=""))
+  rm(list=ls(envir=globalenv()), envir = globalenv())
+}
 
 # Point to R file
 filename <- "mba.R"
@@ -199,91 +306,3 @@ nGrps <- 10
 
 # Run script
 camcon(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q')
-
-
-
-
-# Prepare solution csv file
-
-# Vector or Question Names
-Qnames <- "\nQnames <- c("
-for (i in 1:nqs) {
-  qname <- sub("#", "", script[qlocs[i]])
-  qname <- sub("_", "-", qname)
-  qname <- paste("\"",qname,sep="")
-  qname <- paste(qname,"\"",sep="")
-  if (i < nqs) qname <- paste(qname,",",sep="")
-  else qname <- paste(qname,")",sep="")
-  Qnames <- paste(Qnames,qname,sep="")
-}
-write(Qnames, file=paste("new",rfile,sep=""),append=T)
-
-# Vector of Question Types (single or multiple only)
-Qtype <- "Qtype <- sapply(1:nqs, function(i) ifelse(is.numeric(eval(parse(text=sub(\"-\",\"_\",Qnames[i])))[1]),\"number\",\"multiple\"))"
-write(Qtype, file=paste("new",rfile,sep=""),append=T)
-
-tolower(c("A","B"))
-# Vector or Options
-Qopts <- "Qopts <- sapply(1:nqs, function(i) ifelse(Qtype[i] == \"multiple\", \"1\", \"\")) \n#NOTE : Qopts must be overwriten with correct number of options"
-write(Qopts, file=paste("new",rfile,sep=""),append=T)
-
-# Assign points to each question
-base <- floor(100/nqs)
-points <- rep(base,nqs)
-nshort <- 100-sum(points)
-while(nshort > 0) {
-  qfill <- max(1,floor(nshort/nqs))
-  print(qfill)
-  nfill <- floor(nshort/qfill)
-  wfill <- sample(1:nqs, nfill, replace=F)
-  points <- points+sapply(1:nqs, function(i) ifelse(i %in% wfill, qfill, 0))
-  nshort <- 100-sum(points)
-}
-points <- as.character(points)
-Qpoints <- "Qpoints <- c("
-for (i in 1:nqs) {
-  qpoint <- points[i]
-  qpoint <- paste("\"",qpoint,sep="")
-  qpoint <- paste(qpoint,"\"",sep="")
-  if (i < nqs) qpoint <- paste(qpoint,",",sep="")
-  else qpoint <- paste(qpoint,")",sep="")
-  Qpoints <- paste(Qpoints,qpoint,sep="")
-}
-write(Qpoints, file=paste("new",rfile,sep=""),append=T)
-
-# Create solution matrix
-sol.mat <- sub("\nQnames <- ","",Qnames)
-sol.mat <- gsub("-","_",sol.mat)
-sol.mat <- gsub("\"","",sol.mat)
-sol.mat <- sub("c","cbind",sol.mat)
-sol.mat <- paste("\nsol.mat <- ", sol.mat, sep="")
-sol.mat <- paste(sol.mat, "\nfor(i in 1:", sep="")
-sol.mat <- paste(sol.mat, nqs, sep="")
-sol.mat <- paste(sol.mat, ") {
-    if (Qtype[i] == \"multiple\") sol.mat[,i] <- tolower(sol.mat[,i])
-}", sep="")
-
-write(sol.mat, file=paste("new",rfile,sep=""),append=T)
-
-for (i in 1:nqs) {
-  qname <- sub("#", "", script[qlocs[i]])
-  qname <- paste("\"",qname,sep="")
-  qname <- paste(qname,"\"",sep="")
-  if (i < nqs) qname <- paste(qname,",",sep="")
-  else qname <- paste(qname,")",sep="")
-  Qnames <- paste(Qnames,qname,sep="")
-}
-sol.mat <- cbind()
-
-# Final output function
-final <- paste("\nnGrps <- ",nGrps,sep="")
-pt1 <- paste("\nnQs <- ",nqs,sep="") ; final <- paste(final,pt1,sep="")
-final <- paste(final, "\nsol.dat <- as.data.frame(matrix(NA,nrow=(nQs*nGrps), ncol=8))
- for (i in 1:nQs) {
-     for (j in 1:nGrps) {
-         sol.dat[(i-1)*nGrps+j,] <- c(Qnames[i],Qtype[i],j,0,Qpoints[i],sol.mat[j,i],Qopts[i],paste((j-1)*nQs+i-1,\".png\", sep=\"\"))\n}\n}",sep="")
-
-write(final, file=paste("new",rfile,sep=""),append=T)
-
-lastbit <- "\nwrite.table(sol.dat, \"solutions.csv\", sep=\";\", row.names = FALSE, col.names=FALSE)"
-write(lastbit, file=paste("new",rfile,sep=""),append=T)
