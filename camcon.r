@@ -297,12 +297,3 @@ tidyup <- function(rfile) {
   file.remove(paste(getwd(), "/camcon_", rfile, sep=""))
   rm(list=ls(envir=globalenv()), envir = globalenv())
 }
-
-# Point to R file
-filename <- "mba.R"
-
-# Specify Number of Groups
-nGrps <- 10
-
-# Run script
-camcon(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q')
