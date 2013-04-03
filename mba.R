@@ -1,9 +1,8 @@
 #install.packages("lawstat")
 library(car)
-mba <- read.csv('mba.csv')
 
 #DATA
-mba
+mba <- read.csv('mba.csv')
 
 #PARAMS
 param.1 <- rbinom(p=0.5,size=1,n=1)
@@ -52,7 +51,10 @@ q1_vi_options <- 4
 #Q2-i
 q2_i = param.1 + param.2; q2_i
 
-
 #Q2-ii
 q2_ii = param.1 * param.2; q2_ii
+
+#Q2-iii
+q2_iii = 'This is a text answer.'
+
 #END
