@@ -12,17 +12,17 @@
 #' @param pngs if T then produces .png solutions unique to each group for upload to camcon.eu
 #' @param debug if T then post-processing does not occur, i.e. does not delete variables or intermediary files used by camcon()
 #' @export
-camcon <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', pngs = T, debug = F) {
+camcon <- function(rfile, ngrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', propdrop=0.1, pngs = T, debug = F) {
   origFiles <- ls(envir=globalenv())
   con <- file(rfile); script <- readLines(con, warn=F); close(con)
   valid_params(ngrps, strpattern, qpattern, pngs, debug, script)
   cc_str <- camcon_init(rfile)
-  gen_out <- gen_script(ngrps, strpattern, qpattern, script, cc_str)
+  gen_out <- gen_script(ngrps, strpattern, qpattern, script, cc_str, propdrop)
   source(cc_str$file)
   gen_csv(ngrps, cc_str$dir, gen_out$qlocs)  
   if(pngs) pnganswers(gen_out$orig_qscript, gen_out$qlocs, ngrps, cc_str$dir)
   if(!debug) tidyup(cc_str$file, origFiles)
-  message(paste('Output placed in folder:',cc_str$dir))
+  message(paste('Camcon output placed in folder:',cc_str$dir,'\n--------------'))
 }
 
 #' Check for valid group number
@@ -153,7 +153,7 @@ getdata <- function(script, start, end) {
   else NA
 }
 
-createalldata <- function(alldata, ngrps, ccroot, ccfile) {
+createalldata <- function(alldata, ngrps, ccroot, ccfile, propdrop) {
   cat('\n\n# =================================================#',
       '\n# DATA: BLANK FOR NOW, CAN PUT ANYTHING HERE',
       '\n# =================================================#', file = ccfile, append=T)
@@ -164,7 +164,7 @@ createalldata <- function(alldata, ngrps, ccroot, ccfile) {
     }
     data.names <- rep(NA, length(alldata))
     for(i in 1:length(alldata)) {
-      data.names[i] <- createdata(alldata[i], ngrps, ccroot, ccfile)
+      data.names[i] <- createdata(alldata[i], ngrps, ccroot, ccfile, propdrop)
     }
     if(sum(is.na(data.names)) < length(alldata)) data.names[!is.na(data.names)]
     else NA
@@ -172,7 +172,7 @@ createalldata <- function(alldata, ngrps, ccroot, ccfile) {
   else NA
 }
 
-createdata <- function(data, ngrps, ccroot, ccfile) {
+createdata <- function(data, ngrps, ccroot, ccfile, propdrop) {
   data.len <- nchar(data)
   if(length(grep('<-', data)) > 0) {
     pos <- regexpr('<-',data)[1]
@@ -186,13 +186,16 @@ createdata <- function(data, ngrps, ccroot, ccfile) {
   }
   if(exists('lhs')) lhs <- gsub(" ", "", lhs)
   if(exists('lhs') & exists('rhs')) {
+    toRem <- paste('toRem <- sample(1:n,max(1,round(n*',propdrop,')), replace=F)',sep='')
     cat('\n',lhs,'<-',rhs,'\n',
         'if(!exists("', lhs, '")) stop("Cannot find data frame: ', lhs, '")\n',
-        lhs,'.ls <- list()\n',
         'n <- nrow(',lhs,')\n',
+        'if(round(n*',propdrop,')<1) warning("Variable propdrop too small to introduce variation, so one row dropped at random instead for data frame: ', lhs, '", call. = FALSE)\n',
+        lhs,'.ls <- list()\n',
         'folder <- "',ccroot,'"\n',
         'for(i in 1:',ngrps,') {\n',
-        '  toRem <- (i %% ',ngrps,') + seq(1, n, by=',ngrps,')\n',
+        '  ',toRem,'\n',
+#         '  toRem <- (i %% ',ngrps,') + seq(1, n, by=',ngrps,')\n',
         '  ',lhs,'.ls[[i]] <- ' ,lhs,'[-toRem,]\n',
         '  file_path <- paste(paste(paste(folder,"group",sep=""),i,sep="_"),"/',lhs,'.csv",sep="")\n',
         '  write.csv(',lhs,'.ls[[i]], file_path, row.names = FALSE)\n',
@@ -314,10 +317,10 @@ createqs <- function(qscript, qlocs, ngrps, ccfile) {
       '}', sep='', file = ccfile, append=T)
 }
 
-gen_script <- function(ngrps, strpattern, qpattern, script, cc_str) {
+gen_script <- function(ngrps, strpattern, qpattern, script, cc_str, propdrop) {
   strlocs <- getstrlocs(script, strpattern)
   makeheader(script, cc_str$file, strlocs$he)
-  data <- createalldata(getdata(script, strlocs$ds, strlocs$de), ngrps, cc_str$dir, cc_str$file)
+  data <- createalldata(getdata(script, strlocs$ds, strlocs$de), ngrps, cc_str$dir, cc_str$file, propdrop)
   params <- createallparams(getparams(script, strlocs$ps, strlocs$pe), ngrps, cc_str$file)
   if((sum(is.na(data)) != 0) & (sum(is.na(params)) != 0)) stop('Did not find any data or parameter vectors.')
   qscript <- dpreplace(script[strlocs$qs:strlocs$qe], data, params)
@@ -451,3 +454,15 @@ tidyup <- function(ccfile, origFiles) {
   file.remove(ccfile) 
   rm(list=ls(envir=globalenv())[!(ls(envir=globalenv()) %in% origFiles)], envir = globalenv())
 }
+
+#' @name growth
+#' @title Needs a title
+#' @description This data set needs a description.
+#' @docType data
+#' @usage growth
+#' @format a 6x3 data frame
+#' @source Find source
+#' @author Find author
+#' @export
+NULL
+

@@ -4,7 +4,7 @@
 \usage{
   camcon(rfile, ngrps,
     strpattern = c("#DATA", "#PARAMS", "#SCRIPT", "#END"),
-    qpattern = "#Q", pngs = T, debug = F)
+    qpattern = "#Q", propdrop = 0.1, pngs = T, debug = F)
 }
 \arguments{
   \item{rfile}{the R file for replication, must have
