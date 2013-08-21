@@ -12,3 +12,13 @@ Depends:
 License: MIT
 Collate:
     'camcon.r'
+    'camcon_validate.r'
+    'camcon_init.r'
+    'camcon_scriptgen.r'
+    'camcon_header.r'
+    'camcon_data.r'
+    'camcon_params.r'
+    'camcon_qs.r'
+    'camcon_csv.r'
+    'camcon_png.r'
+    'camcon_datasets.r'

@@ -2,13 +2,19 @@
 \alias{camcon}
 \title{Generates file for upload to camcon.eu}
 \usage{
-  camcon(rfile, ngrps,
+  camcon(rfile, texqfile = "", texafile = "", ngrps = 1,
     strpattern = c("#DATA", "#PARAMS", "#SCRIPT", "#END"),
-    qpattern = "#Q", propdrop = 0.1, pngs = T, debug = F)
+    qpattern = "#Q", pngs = T, debug = F)
 }
 \arguments{
   \item{rfile}{the R file for replication, must have
   specific structure (see documentation)}
+
+  \item{texqfile}{optional file to produce unique question
+  sheets, must have specific structure (see documentation)}
+
+  \item{texafile}{optional file to produce unique answer
+  sheets, must have specific structure (see documentation)}
 
   \item{ngrps}{number of unique solution sets to produce}
 

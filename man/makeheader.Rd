@@ -2,14 +2,14 @@
 \alias{makeheader}
 \title{Outputs header information to file}
 \usage{
-  makeheader(script, ccfile, end)
+  makeheader(rscript, cc_rfile, end)
 }
 \arguments{
-  \item{script}{line by line list produced from R file for
+  \item{rscript}{line by line list produced from R file for
   replication}
 
-  \item{ccfile}{name of output file to be written to during
-  replication process}
+  \item{cc_rfile}{location of output file to be written to
+  during replication process}
 
   \item{end}{an integer specifying the index value in
   script at which the header ends}

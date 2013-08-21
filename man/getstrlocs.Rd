@@ -2,10 +2,10 @@
 \alias{getstrlocs}
 \title{Matches location of sections in script}
 \usage{
-  getstrlocs(script, strpattern)
+  getstrlocs(rscript, strpattern)
 }
 \arguments{
-  \item{script}{line by line list produced from R file for
+  \item{rscript}{line by line list produced from R file for
   replication}
 
   \item{strpattern}{pattern associated with data,

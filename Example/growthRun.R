@@ -14,4 +14,4 @@ filename <- paste(getwd(),"/Example/growth.R",sep='/')
 nGrps <- 2
 
 # Run script
-camcon(filename, nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', pngs = T, propdrop=0.1, debug=F)
+camcon(rfile = filename, ngrps = nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', pngs = T, debug=F)

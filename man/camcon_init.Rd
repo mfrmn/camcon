@@ -9,8 +9,8 @@
   camcon}
 }
 \description{
-  Creates folder of format /camcon_filename/ for storing
-  data files, .csv file with solutions, and .png files, and
-  blank script for camcon replication.
+  Creates folder /camcon_filename/ for storing data files,
+  question sheets, .csv file with solutions, and .png
+  files, and blank script for camcon replication.
 }
 

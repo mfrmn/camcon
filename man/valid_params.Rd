@@ -3,7 +3,7 @@
 \title{Check for valid initialising parameters in camcon() function}
 \usage{
   valid_params(ngrps, strpattern, qpattern, pngs, debug,
-    script)
+    rscript)
 }
 \arguments{
   \item{ngrps}{number of unique solution sets to produce}
@@ -21,7 +21,7 @@
   i.e. does not delete variables or intermediary files used
   by camcon()}
 
-  \item{script}{line by line list produced from R file for
+  \item{rscript}{line by line list produced from R file for
   replication}
 }
 \description{

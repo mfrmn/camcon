@@ -1,8 +1,8 @@
-\name{getdata}
-\alias{getdata}
-\title{Collects data section}
+\name{getparams}
+\alias{getparams}
+\title{Collects parameter section}
 \usage{
-  getdata(rscript, start, end)
+  getparams(script, start, end)
 }
 \arguments{
   \item{rscript}{line by line list produced from R file for
@@ -15,7 +15,7 @@
   script at which the data section ends}
 }
 \description{
-  Outputs list of all non-empty lines specified in data
-  section
+  Outputs list of all non-empty lines specified in
+  parameter section
 }
 
