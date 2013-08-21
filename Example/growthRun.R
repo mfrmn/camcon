@@ -1,7 +1,7 @@
 # install.packages('devtools')
 # install.packages('roxygen2')
 library(devtools)
-devtools::document()
+# devtools::document()
 install_github(repo = "camcon", username = "mfrmn")
 library(camcon)
 

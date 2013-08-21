@@ -27,7 +27,7 @@ camcon <- function(rfile, texqfile = "", texafile = "", ngrps = 1, strpattern = 
   gen_csv(ngrps, struc$dir, gen_out$qlocs, gen_out$qparams)
   if(pngs) pnganswers(gen_out$orig_qscript, gen_out$qlocs, ngrps, struc$dir)
   if(!debug) tidyup(struc$file, origFiles)
-  system(paste('zip -rj "',struc$dir,'upload.zip" "',struc$dir,'output/"', sep=""))
+  if(.Platform$OS.type == "unix") system(paste('zip -rj "',struc$dir,'upload.zip" "',struc$dir,'output/"', sep=""))
   message(paste('Camcon output placed in folder:',struc$dir,'\n--------------'))
 }
 
