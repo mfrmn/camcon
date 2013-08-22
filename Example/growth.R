@@ -4,6 +4,8 @@ data(growth)
 growth.dat <- growth # [CS,0.2]
 
 #PARAMS
+param.1 <- sample.int(10,1)
+param.2 <- sample.int(10,1)
 
 #SCRIPT
 
@@ -23,8 +25,13 @@ q2_i <- coef(lm1)[2]
 #Q2-ii [20,NUM]
 q2_ii <- summary(lm1)$r.squared
 
-#Q2-iii [3]
-q2_iii <- "Hi"
-# This is the solution
+#Q3 [3]
+q3 <- ""
+
+#Q4-i
+q4_i <- param.1+param.2
+
+#Q4-ii
+q4_ii <- param.1*param.2
 
 #END

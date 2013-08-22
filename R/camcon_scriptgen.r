@@ -10,17 +10,16 @@
 #' @param qpattern pattern to identify location of each unique question
 #' @param rscript line by line list produced from R file for replication
 #' @param struc location of output folder and file to be written to during replication process
-
 gen_script <- function(ngrps, strpattern, qpattern, rscript, struc) {
   strlocs <- getstrlocs(rscript, strpattern)
   makeheader(rscript, struc$file, strlocs$he)
   data <- createalldata(getdata(rscript, strlocs$ds, strlocs$de), ngrps, struc$dir, struc$file)
   params <- createallparams(getparams(rscript, strlocs$ps, strlocs$pe), ngrps, struc$file)
   if((sum(!is.na(data)) == 0) & (sum(!is.na(params)) == 0)) stop('Did not find any data or parameter vectors.')
-  qscript <- dpreplace(rscript[strlocs$qs:strlocs$qe], data, params)
-  qlocs <- getqlocs(qscript$new, qpattern)
-  qparams <- createqs(qscript$new, qlocs, ngrps, struc$file)
-  list(qlocs=qlocs, orig_qscript=qscript$orig, qparams=qparams)
+  qsection <- dpreplace(rscript[strlocs$qs:strlocs$qe], data, params)
+  qlocs <- getqlocs(qsection$new, qpattern)
+  qparams <- createqs(qsection$new, qlocs, ngrps, struc$file)
+  list(qlocs=qlocs, orig_qsection=qsection$orig, params=params, qparams=qparams)
 }
 
 #' Matches location of sections in script
@@ -44,21 +43,21 @@ getstrlocs <- function(rscript, strpattern) {
 #' names of a data frame or a parameter vector specified in the #DATA and #PARAMS sections
 #' it replaces it with the a new version which was generated using createalldata() and createallparams()
 #'
-#' @param qscript line by line list produced from question section of the original R file
+#' @param qsection line by line list produced from question section of the original R file
 #' @param data the names of all of the detected data frames
 #' @param params the names of all of the detected parameters
-dpreplace <- function(qscript, data, params) {
-  qscript <- qscript[qscript != '']
-  orig <- qscript
+dpreplace <- function(qsection, data, params) {
+  qsection <- qsection[qsection != '']
+  orig <- qsection
   if(sum(is.na(data)) == 0) {
     for(i in 1:length(data)) {
-      qscript <- gsub(data[i], paste(data[i],".ls[[i]]", sep=""), qscript)
+      qsection <- gsub(data[i], paste(data[i],".ls[[i]]", sep=""), qsection)
     }
   }
   if(sum(is.na(params)) == 0) {
     for(i in 1:length(params)) {
-      qscript <- gsub(params[i], paste(params[i],"[i]", sep=""), qscript)
+      qsection <- gsub(params[i], paste(params[i],"[i]", sep=""), qsection)
     }
   }
-  list(orig=orig,new=qscript)
+  list(orig=orig,new=qsection)
 }

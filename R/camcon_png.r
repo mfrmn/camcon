@@ -1,14 +1,14 @@
-pnganswers <- function(qscript, qlocs, ngrps, cc_dir) {
+pnganswers <- function(qsection, qlocs, ngrps, cc_dir) {
   require(PerformanceAnalytics)
   root <- paste(cc_dir, 'output/', sep="")
   if(!file.exists(root)) dir.create(root)
-  locs <- c(qlocs, length(qscript)+1)
+  locs <- c(qlocs, length(qsection)+1)
   for(i in 1:ngrps) {
     for(j in 1:(length(locs)-1)) {
       basecharperline <- 75; basenlines <- 25; cexval <- 1.5
       charperline <- floor(basecharperline / cexval)
       nline <- floor(basenlines / cexval)
-      text <- c(qscript[locs[j]:(locs[j+1]-1)],'',paste('#ANS:',camcon_sols[[i]][j]))
+      text <- c(qsection[locs[j]:(locs[j+1]-1)],'',paste('#ANS:',camcon_sols[[i]][j]))
       text.vec <- c()
       pos <- 1
       for(k in 1:length(text)) {

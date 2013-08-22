@@ -20,5 +20,6 @@ Collate:
     'camcon_params.r'
     'camcon_qs.r'
     'camcon_csv.r'
+    'camcon_pdfs.r'
     'camcon_png.r'
     'camcon_datasets.r'

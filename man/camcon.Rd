@@ -4,7 +4,7 @@
 \usage{
   camcon(rfile, texqfile = "", texafile = "", ngrps = 1,
     strpattern = c("#DATA", "#PARAMS", "#SCRIPT", "#END"),
-    qpattern = "#Q", pngs = T, debug = F)
+    qpattern = "#Q", pngs = T, zip = T, debug = F)
 }
 \arguments{
   \item{rfile}{the R file for replication, must have
@@ -26,6 +26,9 @@
 
   \item{pngs}{if T then produces .png solutions unique to
   each group for upload to camcon.eu}
+
+  \item{zip}{if T then zips all folders created by camcon
+  ready for direct upload to camcon.eu}
 
   \item{debug}{if T then post-processing does not occur,
   i.e. does not delete variables or intermediary files used

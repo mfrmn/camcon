@@ -25,14 +25,14 @@ getdata <- function(rscript, start, end) {
 #' @param cc_dir location of output directory to be written to during replication process
 #' @param cc_rfile location of output file to be written to during replication process
 createalldata <- function(alldata, ngrps, cc_dir, cc_rfile) {
+  for(i in 1:ngrps) {
+    gr_folder <- paste(cc_dir, "data_", i, "/", sep="")
+    if(!file.exists(gr_folder)) dir.create(gr_folder)
+  }
   cat('\n\n# =================================================#',
       '\n# DATA: ALL DATA SETS TO RANDOMIZE',
       '\n# =================================================#', file = cc_rfile, append=T)
   if(sum(!is.na(alldata)) != 0) {
-    for(i in 1:ngrps) {
-      gr_folder <- paste(cc_dir, "data_", i, "/", sep="")
-      if(!file.exists(gr_folder)) dir.create(gr_folder)
-    }
     data.names <- rep(NA, length(alldata))
     for(i in 1:length(alldata)) {
       params <- detectdatatype(alldata[i])
@@ -160,7 +160,6 @@ createcsdata <- function(data, propdrop, lhs, rhs, ngrps, cc_dir, cc_rfile) {
       '}\n',
       'rm(n); rm(folder); rm(file_path); rm(i); rm(toRem)', sep='', file = cc_rfile, append=T)
 }
-
 
 #' Writes to camcon script for time-series data
 #'

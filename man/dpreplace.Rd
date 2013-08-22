@@ -2,10 +2,10 @@
 \alias{dpreplace}
 \title{Replaces original data and parameters in script with new versions unique to each individual}
 \usage{
-  dpreplace(qscript, data, params)
+  dpreplace(qsection, data, params)
 }
 \arguments{
-  \item{qscript}{line by line list produced from question
+  \item{qsection}{line by line list produced from question
   section of the original R file}
 
   \item{data}{the names of all of the detected data frames}

@@ -14,4 +14,4 @@ filename <- paste(getwd(),"mba.R",sep='/')
 nGrps <- 10
 
 # Run script
-camcon(rfile = filename, nrgps = nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', pngs = F, propdrop=0.01)
+camcon(rfile = filename, nrgps = nGrps, strpattern = c('#DATA','#PARAMS','#SCRIPT','#END'), qpattern = '#Q', pngs = F)

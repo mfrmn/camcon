@@ -72,7 +72,7 @@ createqs <- function(qscript, qlocs, ngrps, cc_rfile) {
       '  ', text,
       '\n\n  camcon_validq <- ', qexist, '\n',
       '  if(i == 1) {\n',
-      '    if(FALSE %in% sapply(camcon_validq, function(x) exists(x))) stop("Inconsistent variable name(s). Expected but did not find:\n    ",paste(paste(camcon_validq[!sapply(camcon_validq, function(x) exists(x))], collapse=', ')))\n',
+      '    if(FALSE %in% sapply(camcon_validq, function(x) exists(x))) stop("Inconsistent variable name(s). Expected but did not find:\n    ",paste(paste(camcon_validq[!sapply(camcon_validq, function(x) exists(x))], collapse=", ")))\n',
       '  }\n\n',
       '  camcon_sols[[i]] <- ', qvec, '\n',
       '  rm(list=camcon_validq)\n',
