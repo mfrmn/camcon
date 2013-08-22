@@ -24,7 +24,7 @@ camcon <- function(rfile, texqfile = "", texafile = "", ngrps = 1, strpattern = 
   struc <- camcon_init(rfile)
   gen_out <- gen_script(ngrps, strpattern, qpattern, rscript, struc)
   source(struc$file)
-  gen_csv(ngrps, struc$dir, gen_out$qlocs, gen_out$qparams)
+  gen_csv(ngrps, struc$dir, gen_out$qlocs, gen_out$qparams, pngs)
   if(pngs) pnganswers(gen_out$orig_qscript, gen_out$qlocs, ngrps, struc$dir)
   if(!debug) tidyup(struc$file, origFiles)
   if(.Platform$OS.type == "unix") system(paste('zip -rj "',struc$dir,'upload.zip" "',struc$dir,'output/"', sep=""))
