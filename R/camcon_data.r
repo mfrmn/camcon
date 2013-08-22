@@ -24,7 +24,6 @@ getdata <- function(rscript, start, end) {
 #' @param ngrps number of unique solution sets to produce
 #' @param cc_dir location of output directory to be written to during replication process
 #' @param cc_rfile location of output file to be written to during replication process
-
 createalldata <- function(alldata, ngrps, cc_dir, cc_rfile) {
   cat('\n\n# =================================================#',
       '\n# DATA: ALL DATA SETS TO RANDOMIZE',

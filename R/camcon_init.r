@@ -21,5 +21,3 @@ camcon_init <- function(rfile) {
   
   list(dir=camcon_root, file=camcon_file)
 }
-
-
