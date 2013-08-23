@@ -1,12 +1,3 @@
-#' Generates script used by camcon function to produce unique datasets and solutions.
-#'
-#' This function takes a suitable .R input file and (optionally) .tex question sheet
-#' and produces from this unique datasets, calculates individual answers, and
-#' (optionally) creates .png solutions and individual question sheets for direct
-#' upload to camcon.eu.
-#'
-#' @param ngrps number of unique solution sets to produce
-#' @param params the names of all of the detected parameters
 gen_qpdfs <- function(texqfile, ngrps, cc_dir, qscript, params) {
   currdir <- getwd()
   path <- cc_dir

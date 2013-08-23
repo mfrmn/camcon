@@ -161,9 +161,8 @@ answercsv <- function(qlocs, qtype, qoptions, qmaxlines, qpoints, ngrps, cc_dir,
   for(i in 1:ngrps) {
     for(j in 1:length(qnames)) {
       soln <- camcon_sols[[i]][j]
-      png <- ""
+      png <- paste('sols_G', i, '_Q', j, '.png', sep='')
       if(qtype[j] == "text") soln <- qmaxlines[j]
-      else { if(pngs) png <- paste('sols_G', i, '_Q', j, '.png', sep='') }
       sol.mat <- rbind(sol.mat, cbind(qnames[j], qtype[j], i, 0, qpoints[j], soln, qoptions[j], png))
     }
   }

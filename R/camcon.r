@@ -28,17 +28,19 @@ camcon <- function(rfile, texqfile = "", texafile = "", ngrps = 1, strpattern = 
   gen_csv(ngrps, struc$dir, gen_out$qlocs, gen_out$qparams, pngs)
   if(texqfile != "") gen_qpdfs(texqfile, ngrps, struc$dir, qscript, gen_out$params)
   if(pngs) pnganswers(gen_out$orig_qsection, gen_out$qlocs, ngrps, struc$dir)
-  if(.Platform$OS.type == "unix") {
-    system(paste('zip -rj "',struc$dir,'upload.zip" "',struc$dir,'output/"', sep=""), ignore.stdout=T)
-    for(i in 1:ngrps) {
-      system(paste('zip -rj "',struc$dir,'data_',i,'.zip" "',struc$dir,'data_',i,'/"', sep=""), ignore.stdout=T)
+  if(zip) {
+    if(.Platform$OS.type == "unix") {
+      system(paste('zip -rj "',struc$dir,'upload.zip" "',struc$dir,'output/"', sep=""), ignore.stdout=T)
+      for(i in 1:ngrps) {
+        system(paste('zip -rj "',struc$dir,'data_',i,'.zip" "',struc$dir,'data_',i,'/"', sep=""), ignore.stdout=T)
+      }
+      unlink(paste(struc$dir,list.files(path=struc$dir)[!(list.files(path=struc$dir) %in% list.files(path=struc$dir, pattern="\\.zip"))],sep=""), recursive=T)
     }
-    unlink(paste(struc$dir,list.files(path=struc$dir)[!(list.files(path=struc$dir) %in% list.files(path=struc$dir, pattern="\\.zip"))],sep=""), recursive=T)
   }
   if(!debug) tidyup(struc$file, origFiles)
   message(paste('Camcon output placed in folder:',struc$dir,'\n--------------'))
 }
-?file.remove
+
 tidyup <- function(cc_rfile, origFiles) {
   file.remove(cc_rfile)
   rm(list=ls(envir=globalenv())[!(ls(envir=globalenv()) %in% origFiles)], envir = globalenv())
